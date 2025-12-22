@@ -1,39 +1,32 @@
-name: Deploy Web to VPS
+name: Deploy Static Files to VPS
 
 on:
   push:
-    branches: [ "main" ] # Ou "master", verifique o nome da sua branch principal
+    branches: [ "main" ] # Verifique se sua branch é 'main' ou 'master'
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Baixa o código do repositório
+      # 1. Baixa os arquivos do seu repositório
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Instala o Flutter no ambiente do GitHub
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-      
-      # 3. Baixa as dependências e gera o build
-      - name: Install dependencies & Build
-        run: |
-          flutter pub get
-          flutter build web --release
-
-      # 4. Envia os arquivos para a VPS via SCP
+      # 2. Copia TUDO para a VPS
       - name: Deploy to VPS
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          # Copia o conteúdo de build/web para a pasta do servidor
-          source: "build/web/*"
+          
+          # AQUI É O PULO DO GATO:
+          # source: "." pega todos os arquivos da raiz do repositório
+          # target: A pasta onde o Nginx está lendo
+          source: "."
           target: "/var/www/smokingbee.com.br"
-          # Remove as pastas 'build/web' do caminho no destino, copiando apenas os arquivos internos
-          strip_components: 2
+          
+          # Ignora pastas que não devem ir pro servidor (como a config do github)
+          rm: true # (Opcional) Isso limparia a pasta antes de copiar, cuidado! Se não quiser apagar, remova essa linha.
+          exclude: ".git,.github"
