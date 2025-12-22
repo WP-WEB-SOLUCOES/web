@@ -1088,14 +1088,13 @@
     </div>
 
     <script>
-        // Variável global para armazenar a URL dinâmica da API que entrega os bytes
-        let latestApkUrl = "";
+        // Variável global para armazenar a URL FINAL de download (já com stream)
+        let finalDownloadStreamUrl = "";
 
-        // --- 1. Detecta a arquitetura do processador (ABI) para baixar o APK correto ---
+        // --- 1. Detecta a arquitetura do processador (ABI) ---
         function detectAbi() {
-            let abi = 'armeabi-v7a'; // Padrão seguro para dispositivos antigos
+            let abi = 'armeabi-v7a';
             const ua = navigator.userAgent.toLowerCase();
-
             if (ua.includes('x86_64') || ua.includes('x64')) {
                 abi = 'x86_64';
             } else if (ua.includes('arm64') || ua.includes('aarch64')) {
@@ -1104,38 +1103,57 @@
             return abi;
         }
 
-        // --- 2. Configura a URL de download (Não usa fetch, pois a API retorna bytes) ---
-        function updateApkLinks() {
+        // --- 2. Busca o link real e prepara a rota de Stream ---
+        async function updateApkLinks() {
             const abi = detectAbi();
             const txts = document.querySelectorAll('.apk-btn-text');
 
-            // Esta URL, ao ser acessada, dispara o envio dos bytes pelo seu backend
-            latestApkUrl = `https://api.smokingbee.com.br/update-app?version=0&abi=${abi}&app_type=ecommerce`;
+            try {
+                // Chamada para a primeira rota (JSON)
+                const checkUrl = `https://api.smokingbee.com.br/update-app?version=0&abi=${abi}&app_type=ecommerce`;
+                const response = await fetch(checkUrl);
+                const data = await response.json();
 
-            console.log("Arquitetura detectada:", abi);
-            console.log("URL de download direta:", latestApkUrl);
+                if (data.download_url) {
+                    // Pegamos a URL que veio (ex: https://api.../download-file?...)
+                    const rawUrl = data.download_url;
 
-            // Atualiza os textos dos botões
-            txts.forEach(txt => {
-                txt.textContent = `Gerar QR Code APK`;
-            });
+                    // Encodamos ela para passar como parâmetro na segunda rota
+                    const encodedUrl = encodeURIComponent(rawUrl);
 
-            // Configura o botão da seção HERO para baixar diretamente ao clicar
-            const heroBtn = document.querySelector('.hero-actions .download-apk-btn');
-            if (heroBtn) {
-                heroBtn.href = latestApkUrl;
-                heroBtn.setAttribute('download', 'Labanquinha.apk');
+                    // ESTA é a URL que o QR Code deve conter para o download iniciar no celular
+                    finalDownloadStreamUrl = `https://api.smokingbee.com.br/download-stream?url=${encodedUrl}`;
+
+                    console.log("Fluxo de download configurado via Stream:", finalDownloadStreamUrl);
+
+                    txts.forEach(txt => {
+                        txt.textContent = `Gerar QR Code APK (${data.new_version || 'v1.0.5'})`;
+                    });
+
+                    // Atualiza o link do botão na HERO para baixar direto
+                    const heroBtn = document.querySelector('.hero-actions .download-apk-btn');
+                    if (heroBtn) {
+                        heroBtn.href = finalDownloadStreamUrl;
+                    }
+                }
+            } catch (error) {
+                console.error("Erro ao configurar links de download:", error);
+                txts.forEach(txt => txt.textContent = "Download Temporariamente Indisponível");
             }
         }
 
         // --- 3. Função para exibir o QR Code do APK ---
         function showApkQr() {
-            if (!latestApkUrl) updateApkLinks();
+            if (!finalDownloadStreamUrl) {
+                alert("Aguarde um instante enquanto preparamos o link de download...");
+                updateApkLinks();
+                return;
+            }
 
             showQrCode(
-                latestApkUrl,
+                finalDownloadStreamUrl,
                 'Baixar APK Android',
-                'Escaneie para iniciar o download do instalador oficial diretamente no seu celular.'
+                'Escaneie para iniciar o download do instalador oficial direto no seu celular.'
             );
         }
 
@@ -1144,14 +1162,11 @@
             const modal = document.getElementById('qrModal');
             const container = document.getElementById("qrcode-container");
 
-            // Atualiza os textos do modal
             document.querySelector('#qrModal h3').textContent = title;
             document.querySelector('#qrModal p').textContent = description;
 
-            // Limpa QR Code anterior para não duplicar
-            container.innerHTML = "";
+            container.innerHTML = ""; // Limpa anterior
 
-            // Gera o novo QR Code apontando para a rota da API (bytes)
             new QRCode(container, {
                 text: url,
                 width: 220,
@@ -1161,11 +1176,10 @@
                 correctLevel: QRCode.CorrectLevel.H
             });
 
-            // Exibe o modal
             modal.style.display = 'flex';
         }
 
-        // --- 5. Detecção de Dispositivo para interface (UI) ---
+        // --- 5. Detecção de Dispositivo (Interface) ---
         function detectDevice() {
             const userAgent = navigator.userAgent;
             const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
@@ -1183,99 +1197,64 @@
                 deviceTitle.textContent = 'Dispositivo iOS Detectado';
                 deviceStatus.innerHTML = '<i class="fas fa-check-circle" style="color: #8B5CF6;"></i><span>iPhone/iPad Identificado</span>';
                 deviceRecommendation.textContent = 'Recomendamos usar o Web App otimizado para Safari.';
-                deviceActions.innerHTML = `
-                <button onclick="showQrCode('https://smokingbee.com.br', 'Acessar no iPhone', 'Abra a câmera e escaneie para acessar o Web App.')" class="btn btn-primary" style="background: var(--gradient-accent); width: 100%; margin-bottom: 12px;">
-                    <i class="fas fa-qrcode"></i> Mostrar QR Code
-                </button>
-            `;
+                deviceActions.innerHTML = `<button onclick="showQrCode('https://smokingbee.com.br', 'Acessar no iPhone', 'Escaneie para acessar o Web App.')" class="btn btn-primary" style="background: var(--gradient-accent); width: 100%; margin-bottom: 12px;"><i class="fas fa-qrcode"></i> Mostrar QR Code</button>`;
             } else if (isAndroid) {
                 deviceIcon.innerHTML = '<i class="fab fa-android"></i>';
                 deviceIcon.style.color = '#FFD700';
                 deviceTitle.textContent = 'Dispositivo Android Detectado';
                 deviceStatus.innerHTML = '<i class="fas fa-check-circle" style="color: #FFD700;"></i><span>Android Identificado</span>';
-                deviceRecommendation.textContent = 'Recomendamos instalar o APK para uma experiência nativa premium.';
-                deviceActions.innerHTML = `
-                <button onclick="showApkQr()" class="btn btn-primary download-apk-btn" style="width: 100%; margin-bottom: 12px;">
-                    <i class="fas fa-qrcode"></i> <span class="apk-btn-text">Gerar QR Code APK</span>
-                </button>
-            `;
+                deviceRecommendation.textContent = 'Recomendamos instalar o APK para experiência nativa.';
+                deviceActions.innerHTML = `<button onclick="showApkQr()" class="btn btn-primary download-apk-btn" style="width: 100%; margin-bottom: 12px;"><i class="fas fa-qrcode"></i> <span class="apk-btn-text">Gerar QR Code APK</span></button>`;
             } else {
                 deviceIcon.innerHTML = '<i class="fas fa-desktop"></i>';
                 deviceTitle.textContent = 'Dispositivo Desktop Detectado';
-                deviceRecommendation.textContent = 'Para a melhor experiência, escaneie o QR Code abaixo com seu celular.';
-                deviceActions.innerHTML = `
-                <button onclick="showQrCode('https://smokingbee.com.br', 'Acessar na Loja', 'Escaneie para abrir a loja mobile no seu celular.')" class="btn btn-primary" style="width: 100%; margin-bottom: 12px;">
-                    <i class="fas fa-qrcode"></i> Mostrar QR Code da Loja
-                </button>
-            `;
+                deviceRecommendation.textContent = 'Para melhor experiência, escaneie o QR Code abaixo.';
+                deviceActions.innerHTML = `<button onclick="showQrCode('https://smokingbee.com.br', 'Acessar Loja', 'Escaneie para abrir a loja no celular')" class="btn btn-primary" style="width: 100%; margin-bottom: 12px;"><i class="fas fa-qrcode"></i> QR Code da Loja</button>`;
             }
         }
 
         function copyToClipboard() {
-            const link = 'https://smokingbee.com.br';
-            navigator.clipboard.writeText(link).then(() => {
+            navigator.clipboard.writeText('https://smokingbee.com.br').then(() => {
                 showNotification('Link copiado com sucesso!');
             });
         }
 
         function showNotification(message) {
             const notification = document.createElement('div');
-            notification.style.cssText = `
-            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-            background: var(--gradient-primary); color: var(--dark);
-            padding: 16px 32px; border-radius: 12px; font-weight: 600;
-            font-family: var(--font-accent); z-index: 1000;
-            box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease;
-        `;
+            notification.style.cssText = `position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--gradient-primary); color: var(--dark); padding: 16px 32px; border-radius: 12px; font-weight: 600; z-index: 1000; box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease;`;
             notification.textContent = message;
             document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.animation = 'slideDown 0.3s ease';
-                setTimeout(() => { document.body.removeChild(notification); }, 300);
-            }, 3000);
+            setTimeout(() => { document.body.removeChild(notification); }, 3000);
         }
 
         function checkScroll() {
             const elements = document.querySelectorAll('.fade-in');
-            elements.forEach(element => {
-                const elementTop = element.getBoundingClientRect().top;
-                if (elementTop < window.innerHeight - 100) {
-                    element.classList.add('visible');
-                }
+            elements.forEach(el => {
+                if (el.getBoundingClientRect().top < window.innerHeight - 100) el.classList.add('visible');
             });
         }
 
         // --- Inicialização ---
         document.addEventListener('DOMContentLoaded', function () {
-            updateApkLinks(); // Configura as URLs antes da detecção
+            updateApkLinks(); // Pega os dados da API primeiro
             detectDevice();
 
             window.addEventListener('scroll', checkScroll);
             checkScroll();
 
-            // Eventos de clique
             document.getElementById('copyLink')?.addEventListener('click', (e) => { e.preventDefault(); copyToClipboard(); });
             document.getElementById('showQr')?.addEventListener('click', (e) => {
                 e.preventDefault();
                 showQrCode('https://smokingbee.com.br', 'Acessar Loja', 'Escaneie para acessar o portal mobile no seu celular.');
             });
 
-            // Fechar modal ao clicar fora
-            document.getElementById('qrModal').addEventListener('click', function (e) {
-                if (e.target === this) this.style.display = 'none';
-            });
-
-            // Fechar com tecla ESC
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') document.getElementById('qrModal').style.display = 'none';
-            });
+            document.getElementById('qrModal').addEventListener('click', function (e) { if (e.target === this) this.style.display = 'none'; });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.getElementById('qrModal').style.display = 'none'; });
         });
 
-        // CSS Animations inyectado dinamicamente
         const style = document.createElement('style');
         style.textContent = `
         @keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
-        @keyframes slideDown { from { transform: translate(-50%, 0); opacity: 1; } to { transform: translate(-50%, 100%); opacity: 0; } }
     `;
         document.head.appendChild(style);
     </script>
