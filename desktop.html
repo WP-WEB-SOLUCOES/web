@@ -1088,148 +1088,196 @@
     </div>
 
     <script>
-    // Variável global para armazenar a URL FINAL
-    let finalDownloadStreamUrl = "";
-    let isFetching = false;
+        // Variável global para armazenar a URL FINAL que entrega os bytes via Stream
+        let finalDownloadStreamUrl = "";
+        let isFetchingLink = false;
 
-    // --- 1. Detecta a arquitetura ---
-    function detectAbi() {
-        let abi = 'armeabi-v7a'; 
-        const ua = navigator.userAgent.toLowerCase();
-        if (ua.includes('x86_64') || ua.includes('x64')) abi = 'x86_64';
-        else if (ua.includes('arm64') || ua.includes('aarch64')) abi = 'arm64-v8a';
-        return abi;
-    }
-
-    // --- 2. Busca o link na API (Lógica Principal) ---
-    async function updateApkLinks() {
-        if (isFetching) return;
-        isFetching = true;
-        
-        const abi = detectAbi();
-        const txts = document.querySelectorAll('.apk-btn-text');
-        
-        try {
-            // Rota de checagem (JSON)
-            const checkUrl = `https://api.smokingbee.com.br/update-app?version=0&abi=${abi}&app_type=ecommerce`;
-            const response = await fetch(checkUrl);
-            
-            if (!response.ok) throw new Error("Erro na resposta da API");
-            
-            const data = await response.json();
-
-            if (data.download_url) {
-                // Monta a URL final de Stream
-                const encodedUrl = encodeURIComponent(data.download_url);
-                finalDownloadStreamUrl = `https://api.smokingbee.com.br/download-stream?url=${encodedUrl}`;
-
-                console.log("✅ URL configurada:", finalDownloadStreamUrl);
-
-                txts.forEach(txt => {
-                    txt.textContent = `Gerar QR Code APK (${data.new_version || 'v1.0.5'})`;
-                });
-
-                // Vincula ao botão da HERO
-                const heroBtn = document.querySelector('.hero-actions .download-apk-btn');
-                if (heroBtn) heroBtn.href = finalDownloadStreamUrl;
+        // --- 1. Detecta a arquitetura do processador (ABI) ---
+        function detectAbi() {
+            let abi = 'armeabi-v7a'; // Padrão seguro
+            const ua = navigator.userAgent.toLowerCase();
+            if (ua.includes('x86_64') || ua.includes('x64')) {
+                abi = 'x86_64';
+            } else if (ua.includes('arm64') || ua.includes('aarch64')) {
+                abi = 'arm64-v8a';
             }
-        } catch (error) {
-            console.error("❌ Erro ao buscar link:", error);
-            txts.forEach(txt => txt.textContent = "QR Code Indisponível (Erro de Rede)");
-        } finally {
-            isFetching = false;
+            return abi;
         }
-    }
 
-    // --- 3. Função do Botão (Acionada pelo Clique) ---
-    async function showApkQr() {
-        const btnText = document.querySelector('.apk-btn-text');
-        
-        // Se ainda não tem a URL, tenta buscar agora mesmo
-        if (!finalDownloadStreamUrl) {
-            const originalText = btnText.textContent;
-            btnText.textContent = "Buscando link...";
-            await updateApkLinks();
+        // --- 2. Busca o link real na API e prepara a rota de Stream ---
+        async function updateApkLinks() {
+            if (isFetchingLink) return;
+            isFetchingLink = true;
+
+            const abi = detectAbi();
+            const txts = document.querySelectorAll('.apk-btn-text');
+
+            try {
+                // Passo 1: Chama a primeira rota para obter o JSON com o link do arquivo
+                const checkUrl = `https://api.smokingbee.com.br/update-app?version=0&abi=${abi}&app_type=ecommerce`;
+                const response = await fetch(checkUrl);
+
+                if (!response.ok) throw new Error("Erro ao consultar API");
+
+                const data = await response.json();
+
+                if (data.download_url) {
+                    // Passo 2: Pegamos a URL do arquivo e encodamos para a rota de Stream
+                    const rawFileUrl = data.download_url;
+                    const encodedUrl = encodeURIComponent(rawFileUrl);
+
+                    // Esta é a URL que realmente inicia o download dos bytes
+                    finalDownloadStreamUrl = `https://api.smokingbee.com.br/download-stream?url=${encodedUrl}`;
+
+                    console.log("✅ Fluxo configurado:", finalDownloadStreamUrl);
+
+                    // Atualiza os textos dos botões com a versão encontrada
+                    txts.forEach(txt => {
+                        txt.textContent = `Gerar QR Code APK (${data.new_version || 'v1.0.5'})`;
+                    });
+
+                    // Vincula ao botão principal da HERO para download direto
+                    const heroBtn = document.querySelector('.hero-actions .download-apk-btn');
+                    if (heroBtn) {
+                        heroBtn.href = finalDownloadStreamUrl;
+                    }
+                }
+            } catch (error) {
+                console.error("❌ Erro ao configurar links:", error);
+                txts.forEach(txt => txt.textContent = "Download Indisponível");
+            } finally {
+                isFetchingLink = false;
+            }
+        }
+
+        // --- 3. Função acionada ao clicar em "Gerar QR Code" ---
+        async function showApkQr() {
+            const btnText = document.querySelector('.apk-btn-text');
+
+            // Se a página carregou e a API ainda não respondeu, tenta buscar agora
             if (!finalDownloadStreamUrl) {
-                alert("Não foi possível obter o link de download. Verifique sua conexão ou tente mais tarde.");
-                btnText.textContent = originalText;
-                return;
+                const originalText = btnText.textContent;
+                btnText.textContent = "Buscando link...";
+                await updateApkLinks();
+                if (!finalDownloadStreamUrl) {
+                    alert("Não foi possível obter o link de download. Verifique sua conexão.");
+                    btnText.textContent = originalText;
+                    return;
+                }
+            }
+
+            // Se já temos a URL final (Stream), gera o QR Code
+            generateAndShowModal(
+                finalDownloadStreamUrl,
+                'Baixar APK Android',
+                'Aponte a câmera para iniciar o download direto do instalador original.'
+            );
+        }
+
+        // --- 4. Função Genérica para gerar QR Code e abrir Modal ---
+        function generateAndShowModal(url, title, description) {
+            const modal = document.getElementById('qrModal');
+            const container = document.getElementById("qrcode-container");
+
+            if (!container) return;
+            container.innerHTML = ""; // Limpa o QR Code anterior
+
+            // Atualiza os textos do modal
+            document.querySelector('#qrModal h3').textContent = title;
+            document.querySelector('#qrModal p').textContent = description;
+
+            // Instancia a biblioteca QRCode (garanta que o script qrcode.min.js esteja no HEAD)
+            try {
+                new QRCode(container, {
+                    text: url,
+                    width: 220,
+                    height: 220,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                modal.style.display = 'flex';
+            } catch (e) {
+                console.error("Erro ao gerar QR Code:", e);
             }
         }
 
-        // Se chegou aqui, temos a URL, então gera o QR
-        generateAndShowModal(finalDownloadStreamUrl, 'Baixar APK Android', 'Aponte a câmera para iniciar o download direto.');
-    }
+        // --- 5. Detecção de Dispositivo (Interface Visual) ---
+        function detectDevice() {
+            const ua = navigator.userAgent;
+            const isIOS = /iPhone|iPad|iPod/i.test(ua);
+            const isAndroid = /Android/i.test(ua);
 
-    // --- 4. Geração do QR Code e Modal ---
-    function generateAndShowModal(url, title, description) {
-        const modal = document.getElementById('qrModal');
-        const container = document.getElementById("qrcode-container");
+            const deviceIcon = document.getElementById('deviceIcon');
+            const deviceTitle = document.getElementById('deviceTitle');
+            const deviceStatus = document.getElementById('deviceStatus');
+            const deviceRecommendation = document.getElementById('deviceRecommendation');
+            const deviceActions = document.getElementById('deviceActions');
 
-        // Limpa o container e garante que ele existe
-        if (!container) {
-            console.error("Container qrcode-container não encontrado!");
-            return;
+            if (isIOS) {
+                deviceIcon.innerHTML = '<i class="fab fa-apple"></i>';
+                deviceIcon.style.color = '#8B5CF6';
+                deviceTitle.textContent = 'Dispositivo iOS';
+                deviceStatus.innerHTML = '<i class="fas fa-check-circle" style="color: #8B5CF6;"></i><span>iPhone/iPad</span>';
+                deviceRecommendation.textContent = 'Use o Web App otimizado para Safari.';
+                deviceActions.innerHTML = `<button onclick="generateAndShowModal('https://smokingbee.com.br', 'Acessar no iPhone', 'Escaneie para acessar o Web App.')" class="btn btn-primary" style="background: var(--gradient-accent); width: 100%;"><i class="fas fa-qrcode"></i> Mostrar QR Code</button>`;
+            } else if (isAndroid) {
+                deviceIcon.innerHTML = '<i class="fab fa-android"></i>';
+                deviceIcon.style.color = '#FFD700';
+                deviceTitle.textContent = 'Dispositivo Android';
+                deviceStatus.innerHTML = '<i class="fas fa-check-circle" style="color: #FFD700;"></i><span>Android</span>';
+                deviceRecommendation.textContent = 'Instale o APK para uma experiência nativa.';
+                deviceActions.innerHTML = `<button onclick="showApkQr()" class="btn btn-primary" style="width: 100%;"><i class="fas fa-qrcode"></i> <span class="apk-btn-text">Gerar QR Code APK</span></button>`;
+            } else {
+                deviceIcon.innerHTML = '<i class="fas fa-desktop"></i>';
+                deviceTitle.textContent = 'Desktop';
+                deviceRecommendation.textContent = 'Escaneie para acessar no seu celular.';
+                deviceActions.innerHTML = `<button onclick="generateAndShowModal('https://smokingbee.com.br', 'Acessar Loja', 'Escaneie para abrir a loja no celular.')" class="btn btn-primary" style="width: 100%;"><i class="fas fa-qrcode"></i> QR Code da Loja</button>`;
+            }
         }
-        container.innerHTML = ""; 
 
-        // Atualiza textos
-        document.querySelector('#qrModal h3').textContent = title;
-        document.querySelector('#qrModal p').textContent = description;
-
-        // Gera o QR Code
-        try {
-            new QRCode(container, {
-                text: url,
-                width: 220,
-                height: 220,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
+        function copyToClipboard() {
+            navigator.clipboard.writeText('https://smokingbee.com.br').then(() => {
+                showNotification('Link copiado com sucesso!');
             });
-            modal.style.display = 'flex';
-        } catch (e) {
-            console.error("Erro ao instanciar QRCode lib:", e);
         }
-    }
 
-    // --- 5. Lógica de Interface ---
-    function detectDevice() {
-        const ua = navigator.userAgent;
-        const isIOS = /iPhone|iPad|iPod/i.test(ua);
-        const isAndroid = /Android/i.test(ua);
-        const deviceIcon = document.getElementById('deviceIcon');
-        const deviceTitle = document.getElementById('deviceTitle');
-        const deviceActions = document.getElementById('deviceActions');
-
-        if (isIOS) {
-            deviceIcon.innerHTML = '<i class="fab fa-apple"></i>';
-            deviceIcon.style.color = '#8B5CF6';
-            deviceTitle.textContent = 'iOS Detectado';
-            deviceActions.innerHTML = `<button onclick="generateAndShowModal('https://smokingbee.com.br', 'Acessar no iPhone', 'Escaneie para acessar o Web App.')" class="btn btn-primary" style="background: var(--gradient-accent); width: 100%;"><i class="fas fa-qrcode"></i> Mostrar QR Code</button>`;
-        } else if (isAndroid) {
-            deviceIcon.innerHTML = '<i class="fab fa-android"></i>';
-            deviceIcon.style.color = '#FFD700';
-            deviceTitle.textContent = 'Android Detectado';
-            deviceActions.innerHTML = `<button onclick="showApkQr()" class="btn btn-primary" style="width: 100%;"><i class="fas fa-qrcode"></i> <span class="apk-btn-text">Gerar QR Code APK</span></button>`;
-        } else {
-            deviceIcon.innerHTML = '<i class="fas fa-desktop"></i>';
-            deviceTitle.textContent = 'Desktop Detectado';
-            deviceActions.innerHTML = `<button onclick="generateAndShowModal('https://smokingbee.com.br', 'Acessar Loja', 'Escaneie para abrir no celular.')" class="btn btn-primary" style="width: 100%;"><i class="fas fa-qrcode"></i> QR Code da Loja</button>`;
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--gradient-primary); color: var(--dark); padding: 16px 32px; border-radius: 12px; font-weight: 600; z-index: 1000; box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease;`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.animation = 'slideDown 0.3s ease';
+                setTimeout(() => { document.body.removeChild(notification); }, 300);
+            }, 3000);
         }
-    }
 
-    // --- Inicialização ---
-    document.addEventListener('DOMContentLoaded', () => {
-        updateApkLinks(); // Carrega em segundo plano
-        detectDevice();
+        // --- Inicialização ---
+        document.addEventListener('DOMContentLoaded', () => {
+            updateApkLinks(); // Busca dados em segundo plano ao abrir a página
+            detectDevice();
 
-        // Fechar modal
-        const modal = document.getElementById('qrModal');
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modal.style.display = 'none'; });
-    });
-</script>
+            // Eventos gerais
+            document.getElementById('copyLink')?.addEventListener('click', (e) => { e.preventDefault(); copyToClipboard(); });
+            document.getElementById('showQr')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                generateAndShowModal('https://smokingbee.com.br', 'Acessar Loja', 'Escaneie para acessar o portal mobile.');
+            });
+
+            // Fechar modal
+            const modal = document.getElementById('qrModal');
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modal.style.display = 'none'; });
+        });
+
+        const style = document.createElement('style');
+        style.textContent = `
+        @keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        @keyframes slideDown { from { transform: translate(-50%, 0); opacity: 1; } to { transform: translate(-50%, 100%); opacity: 0; } }
+    `;
+        document.head.appendChild(style);
+    </script>
 </body>
 
 </html>
