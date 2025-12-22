@@ -2,31 +2,29 @@ name: Deploy Static Files to VPS
 
 on:
   push:
-    branches: [ "main" ] # Verifique se sua branch é 'main' ou 'master'
+    branches: [ "main" ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Baixa os arquivos do seu repositório
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Copia TUDO para a VPS
       - name: Deploy to VPS
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
           
-          # AQUI É O PULO DO GATO:
-          # source: "." pega todos os arquivos da raiz do repositório
-          # target: A pasta onde o Nginx está lendo
+          # Envia tudo da pasta atual
           source: "."
+          
+          # Destino na VPS
           target: "/var/www/smokingbee.com.br"
           
-          # Ignora pastas que não devem ir pro servidor (como a config do github)
-          rm: true # (Opcional) Isso limparia a pasta antes de copiar, cuidado! Se não quiser apagar, remova essa linha.
-          exclude: ".git,.github"
+          # Limpa a pasta antes de copiar (Cuidado: certifique-se da permissão no Passo 1)
+          rm: true
