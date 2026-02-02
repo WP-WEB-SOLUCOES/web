@@ -45753,7 +45753,7 @@ anJ(a,b,c,d,e,f,a0,a1){var s=0,r=A.L(t.i),q,p=2,o=[],n=this,m,l,k,j,i,h,g
 var $async$uN=A.H(function(a2,a3){if(a2===1){o.push(a3)
 s=p}for(;;)switch(s){case 0:if($.a0A==null)throw A.i(A.ct("ID da Loja n\xe3o configurado."))
 m=A.di("https://api.smokingbee.com.br/stores/calculate-delivery-fee",0,null)
-l=A.ag(["store_id",$.a0A,"customer_cep",a,"client_lat",e,"client_long",f,"rua",a1,"numero",a0,"bairro",b,"cidade",c,"estado",d],t.N,t.z)
+l=A.ag(["store_id",$.a0A,"cep",a,"client_lat",e,"client_long",f,"rua",a1,"numero",a0,"bairro",b,"cidade",c,"estado",d],t.N,t.z)
 A.iz("\ud83d\ude80 [NETWORK DEBUG] Enviando para: https://api.smokingbee.com.br/stores/calculate-delivery-fee")
 A.iz("\ud83d\udce6 [BODY DEBUG]: "+B.a5.lM(l,null))
 B.a5.lM(l,null)
