@@ -44904,7 +44904,7 @@ n=r.h(s,"lifePod")
 m=r.h(s,"camisetas")
 s=l.a
 r=t.p
-return A.z_(A.b([s.a7t(q,a),B.T4,s.y0(a,B.Id,p,"Chegaram agora"," Novidades"),s.y0(a,B.Ir,o,"Dispositivos Premium"," Ignite"),s.y0(a,B.Ik,n,"Sabor e sustentabilidade"," Life Pod"),s.y0(a,B.Ig,m,"Estilo La Banquinha"," Camisetas"),new A.ik(new A.bk(B.Ht,A.c7(A.b([B.Z8,B.cL,A.hs(B.Ic,l.b.aW(0.5),k,20)],r),B.C,B.w,B.v),k),k)],r))},
+return A.z_(A.b([s.a7t(q,a),B.T4,s.y0(a,B.Id,p,"Chegaram agora"," Novidades"),s.y0(a,B.Ir,o,"Dispositivos Premium"," Ignite"),s.y0(a,B.Ik,n,"Sabor e sustentabilidade"," Life Pod"),s.y0(a,B.Ig,m,"Estilo Smoking Bee"," Camisetas"),new A.ik(new A.bk(B.Ht,A.c7(A.b([B.Z8,B.cL,A.hs(B.Ic,l.b.aW(0.5),k,20)],r),B.C,B.w,B.v),k),k)],r))},
 $S:300}
 A.aq5.prototype={
 $0(){var s=this.a
