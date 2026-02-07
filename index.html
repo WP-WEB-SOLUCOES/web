@@ -1,57 +1,221 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-
-  <base href="/">
-
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Smoking Bee - Em breve novidades.">
 
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="ecommerce_web">
+  <link rel="icon" type="image/png" href="favicon.png"/>
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>Smoking Bee | Manutenção</title>
 
-  <script>
-    (function() {
-      function isRealMobile() {
-        var userAgent = navigator.userAgent || navigator.vendor || window.opera;
-        
-        // 1. Verifica se o navegador se identifica como mobile (Padrão)
-        var isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
 
-        // 2. Verifica se o dispositivo tem capacidade de toque (Celulares reais têm > 0)
-        // A maioria dos desktops sem touch retorna 0 ou undefined.
-        var hasTouch = (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+  <style>
+    :root {
+      --primary-gold: #FFD700;
+      --bg-dark: #050505;
+      --surface: #121212;
+      --text-gray: #A0A0A0;
+    }
 
-        // 3. Verifica a largura da tela (Segurança extra)
-        // Se a tela for maior que 1024px, tratamos como Desktop mesmo que seja um iPad Pro ou Tablet grande
-        var isSmallScreen = window.innerWidth <= 1024;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        // LÓGICA FINAL:
-        // É mobile SE: (UserAgent diz que é) E (Tem Touch OU Tela Pequena)
-        // Isso evita que um Desktop simples com UserAgent alterado carregue o app sem querer.
-        return isMobileUA && (hasTouch || isSmallScreen);
+    body {
+      background-color: var(--bg-dark);
+      /* Padrão de Colmeia Sutil no Fundo + Gradiente de Luz */
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(255, 215, 0, 0.1), transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(20, 20, 20, 1), transparent 40%),
+        repeating-linear-gradient(120deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 1px, transparent 1px, transparent 60px),
+        repeating-linear-gradient(60deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02) 1px, transparent 1px, transparent 60px);
+      color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .container {
+      text-align: center;
+      padding: 2.5rem;
+      max-width: 500px;
+      width: 90%;
+      background: rgba(18, 18, 18, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Logo Animation */
+    .logo-container {
+      width: 110px;
+      height: 110px;
+      margin: 0 auto 2rem auto;
+      background: rgba(255, 215, 0, 0.03);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 215, 0, 0.15);
+      animation: float 6s ease-in-out infinite;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.05);
+    }
+
+    .logo {
+      width: 65px;
+      height: 65px;
+      filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(90deg, #fff, var(--primary-gold), #fff);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -1px;
+      animation: shine 5s linear infinite;
+    }
+
+    p {
+      color: var(--text-gray);
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin-bottom: 2.5rem;
+      font-weight: 300;
+    }
+
+    /* --- BARRA DE CARREGAMENTO FLUIDA --- */
+    .loader-wrapper {
+      width: 100%;
+      margin-bottom: 2rem;
+    }
+
+    .loader-container {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative; /* Essencial para o posicionamento absoluto da barra */
+    }
+
+    .loader-bar {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      height: 100%;
+      background: var(--primary-gold);
+      border-radius: 4px;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); /* Glow mais forte */
+      /* A mágica acontece aqui: Ease-in-out suave e infinita */
+      animation: indeterminate 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    .loader-status {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 0.5rem;
+      font-weight: 500;
+    }
+
+    .footer {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.2);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 1rem;
+    }
+
+    /* Animations */
+    @keyframes float {
+      0% { transform: translateY(0px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+      50% { transform: translateY(-12px); box-shadow: 0 20px 30px rgba(0,0,0,0.1); }
+      100% { transform: translateY(0px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    }
+
+    /* Animação "Indeterminate":
+       1. Começa na esquerda com largura 0.
+       2. Cresce até encher a barra (largura 100%) mantendo a esquerda no 0.
+       3. A esquerda começa a andar para 100%, diminuindo a largura para 0.
+       Resultado: A barra enche e depois esvazia para a direita, num fluxo contínuo.
+    */
+    @keyframes indeterminate {
+      0% {
+        left: 0%;
+        width: 0%;
       }
-
-      // Se NÃO for um mobile real, manda para a página de vendas (Desktop)
-      if (!isRealMobile()) {
-        // Redireciona para o Desktop HTML
-        window.location.replace("desktop.html");
+      50% {
+        left: 0%;
+        width: 100%;
       }
-      // Se for Mobile real, o script segue e carrega o Flutter
-    })();
-  </script>
+      100% {
+        left: 100%;
+        width: 0%;
+      }
+    }
 
-  <title>Smoking Bee</title>
-  <link rel="manifest" href="manifest.json">
+    @keyframes shine {
+      to { background-position: 200% center; }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 480px) {
+      .container { padding: 1.5rem; width: 95%; }
+      h1 { font-size: 1.8rem; }
+      p { font-size: 0.95rem; }
+    }
+  </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+
+  <div class="container">
+    <div class="logo-container">
+      <img src="icons/Icon-192.png" alt="Logo Smoking Bee" class="logo">
+    </div>
+
+    <h1>Estamos em Manutenção</h1>
+    
+    <p>
+      Estamos aplicando melhorias na colmeia para tornar sua experiência ainda mais rápida e fluida.
+      <br>
+      Voltaremos em breve.
+    </p>
+
+    <div class="loader-wrapper">
+      <div class="loader-container">
+        <div class="loader-bar"></div>
+      </div>
+      <div class="loader-status">
+        <span>Atualizando sistema...</span>
+        <span>Aguarde</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      Smoking Bee &copy; 2026
+    </div>
+  </div>
+
 </body>
 </html>
